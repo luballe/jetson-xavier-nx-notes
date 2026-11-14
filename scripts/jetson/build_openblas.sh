@@ -1,7 +1,7 @@
 #!/bin/bash
 # Build OpenBLAS 0.3.28 with OpenMP and make it the system libopenblas.so.0.
 # Needed because Ubuntu 20.04's OpenBLAS 0.3.8 gives NaN from PyTorch on the CPU when
-# multi-threaded (see docs/03-software-stack.md). About 15 minutes. Run as root.
+# multi-threaded (see docs/07-pytorch-openblas-nan.md). About 15 minutes. Run as root.
 # Undo with: update-alternatives --config libopenblas.so.0-aarch64-linux-gnu
 set -e
 V=0.3.28; B=${BUILD_DIR:-$HOME/openblas_build}

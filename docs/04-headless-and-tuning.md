@@ -59,7 +59,7 @@ Switching from mode 5 to mode 8 worked without a reboot, and the setting persist
 
 ## zram
 
-The default configuration creates compressed swap in RAM (four devices, about 3.4 GB total). It was left enabled.
+The default configuration creates compressed swap in RAM (one device per CPU core, six here, about 3.4 GB total). It was left enabled.
 
 - It costs nothing while there is no memory pressure.
 - Under pressure it trades some CPU for not killing a process, and it does not wear the SSD.

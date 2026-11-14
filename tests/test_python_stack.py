@@ -103,7 +103,7 @@ def torch_cpu_blas_first_call():
 
     With Ubuntu 20.04's default OpenBLAS (0.3.8, pthread build) the first multi-threaded
     matrix product PyTorch makes returns NaN on this CPU. Fix: a newer OpenBLAS, see
-    docs/03-software-stack.md and scripts/jetson/build_openblas.sh.
+    docs/07-pytorch-openblas-nan.md and scripts/jetson/build_openblas.sh.
     """
     torch = need("torch")
     np = need("numpy")
@@ -119,7 +119,7 @@ def torch_cpu_blas_first_call():
             err = float(np.abs(r.numpy() - ref).max() / ref.max())
             assert err < 1e-4, "relative error vs NumPy %.2e" % err
     assert not bad, ("NaN in CPU matrix product number %s: OpenBLAS threading bug, "
-                     "see docs/03-software-stack.md" % bad)
+                     "see docs/07-pytorch-openblas-nan.md" % bad)
     return "5 CPU products of 1024x1024, no NaN, matches NumPy (%d threads)" % torch.get_num_threads()
 
 
@@ -256,7 +256,7 @@ def torchvision_resnet18_gpu_matches_cpu():
         gpu = m.cuda()(x.cuda()).cpu()
     assert not torch.isnan(gpu).any(), "NaN in the GPU result"
     assert not torch.isnan(cpu).any(), ("NaN in the CPU reference (GPU result is fine): "
-                                        "OpenBLAS threading bug, see docs/03-software-stack.md")
+                                        "OpenBLAS threading bug, see docs/07-pytorch-openblas-nan.md")
     err = (cpu - gpu).abs().max().item()
     assert err < 1e-3, "max abs error %.2e" % err
     return "max abs error %.1e" % err

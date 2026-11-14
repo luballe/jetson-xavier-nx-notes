@@ -73,6 +73,8 @@ Verified with a matrix product and a cuDNN convolution on the GPU. See [scripts/
 
 ### Replace OpenBLAS, or CPU results can be NaN
 
+Short version below; the full investigation is in [07-pytorch-openblas-nan.md](07-pytorch-openblas-nan.md).
+
 Ubuntu 20.04 ships OpenBLAS 0.3.8, and NVIDIA's PyTorch links to it dynamically. On this CPU both builds of that version give wrong results from PyTorch when more than one thread is used. GPU results are not affected, and neither is NumPy from pip, which bundles its own OpenBLAS.
 
 | System OpenBLAS | Symptom |
