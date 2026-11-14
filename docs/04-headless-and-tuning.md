@@ -123,7 +123,9 @@ s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 s.sendto(b"\xff" * 6 + mac * 16, ("192.168.1.255", 9))
 ```
 
-Measured over four wake-ups, one of them after five minutes asleep: SSH answered 11 to 18 s after the magic packet, it was the same boot (not a restart), the NVMe link was still Gen4 with no errors, and a CUDA computation in PyTorch ran correctly afterwards. The kernel log names the wake source:
+[scripts/host/wake-jetson](../scripts/host/wake-jetson) wraps this for a machine that is always on in the same LAN (a home server, a Raspberry Pi): it sends the packet, waits until SSH answers and prints the Jetson's address, which it finds by MAC so a changed DHCP lease does not matter. `wake-jetson --ip` only looks the address up. The MAC goes in `/etc/wake-jetson.conf`.
+
+Measured over five wake-ups, one of them after five minutes asleep: SSH answered 11 to 18 s after the magic packet (the last one sent with the script), it was the same boot (not a restart), the NVMe link was still Gen4 with no errors, and a CUDA computation in PyTorch ran correctly afterwards. The kernel log names the wake source:
 
 ```
 tegra-pmc: Resume caused by WAKE20, 2490000.ethernet:01     # magic packet
@@ -141,10 +143,25 @@ What went wrong on the way, so you can skip it:
 
 Other things to know:
 
-- **A wireless keyboard or mouse dongle wakes the board** on any key press or movement. To stop that for one device: `echo disabled | sudo tee /sys/bus/usb/devices/<id>/power/wakeup` (not persistent).
+- **A USB keyboard wakes the board** with any key press, and so does a mouse movement on a wireless keyboard-and-mouse dongle. That is the default and is usually what you want with a console attached. During the tests it caused two "spontaneous" wake-ups. To stop it for one device: `echo disabled | sudo tee /sys/bus/usb/devices/<id>/power/wakeup` (lasts until reboot or re-plug). `grep . /sys/bus/usb/devices/*/power/wakeup` lists what may wake the board.
 - **The IP address can change after a resume** if the network is brought up outside NetworkManager, because DHCP starts over. With a home router handing out a new address, an SSH session to the old one just hangs, which looks exactly like a crashed board. It is not. Check the console, or scan the LAN, before cutting power. A DHCP reservation in the router avoids the whole problem.
 - **mDNS (`hostname.local`) is not a reliable substitute**: it stopped resolving from a Mac for a while right after each resume.
 - Power drawn while suspended was not measured.
+
+## Reaching the board from outside the LAN
+
+The Jetson itself needs no VPN client if another machine at home already is a WireGuard endpoint. On the laptop, one SSH host entry covers both cases: go direct when the LAN address answers, otherwise jump through the home server.
+
+```
+# ~/.ssh/config
+Match originalhost jetson !exec "nc -z -G 2 192.168.1.152 22 >/dev/null 2>&1"
+    ProxyJump homeserver
+Host jetson
+    HostName 192.168.1.152
+    User youruser
+```
+
+`Match` blocks must come before the `Host` block they refine. `nc -z -G 2` is the macOS spelling of a two-second connect test; on Linux use `nc -z -w 2`. Away from home the same jump host runs the wake script: `ssh homeserver wake-jetson`.
 
 ## A harmless firmware-update loop
 

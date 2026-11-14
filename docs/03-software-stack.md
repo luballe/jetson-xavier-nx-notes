@@ -153,6 +153,18 @@ Verification:
 - A 9x9 Gaussian filter on a 1080p image on the GPU matched the CPU result to within 1 grey level.
 - A small ONNX network through `cv2.dnn` with the CUDA backend matched PyTorch's output (max difference 1e-7; 6e-4 with the FP16 target) and ran about 13 times faster than the CPU backend. That timing was taken while another build was using the CPU, so the CPU figure is pessimistic.
 
+## Claude Code
+
+Anthropic's Claude Code CLI runs on this board. The native installer picked the `linux-arm64` build; version 2.1.325 (the latest in November 2026) installed and started on Ubuntu 20.04 with glibc 2.31.
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash        # no sudo; installs under ~/.local
+claude --version
+claude doctor                                         # "No installation issues found."
+```
+
+`~/.local/bin` is added to `PATH` by Ubuntu's `~/.profile` at the next login. Signing in is interactive (`claude`, then `/login`). The check here went as far as `claude doctor` and the "Not logged in" reply to a prompt; a signed-in session was not tested.
+
 ## Python version
 
 Everything GPU-related here is tied to Python 3.8:

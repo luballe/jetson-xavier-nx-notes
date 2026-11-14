@@ -1,0 +1,46 @@
+#!/bin/bash
+# wake-jetson: wake a suspended Jetson with a Wake-on-LAN magic packet and report its address.
+#   wake-jetson         send the packet, wait until SSH answers, print the IP
+#   wake-jetson --ip    only look up the Jetson's current IP (it is found by MAC, so a
+#                       changed DHCP address does not matter)
+# Works only if the Jetson is SUSPENDED (sudo systemctl suspend), not shut down.
+# Settings: /etc/wake-jetson.conf with MAC=aa:bb:cc:dd:ee:ff (and optionally IFACE=, WAIT=).
+set -u
+CONF=/etc/wake-jetson.conf; [ -r "$CONF" ] && . "$CONF"
+MAC=${MAC:?set MAC= in $CONF}; MAC=$(echo "$MAC" | tr 'A-F' 'a-f')
+IFACE=${IFACE:-$(ip -o route get 1.1.1.1 | sed -E 's/.* dev ([^ ]+).*/\1/')}
+NET=$(ip -o -4 addr show dev "$IFACE" | awk '{print $4}' | head -1)      # e.g. 192.168.1.145/24
+BCAST=$(ip -o -4 addr show dev "$IFACE" | sed -E 's/.* brd ([0-9.]+).*/\1/' | head -1)
+PREFIX=${NET%.*}
+WAIT=${WAIT:-90}
+
+find_ip() {        # refresh the neighbour table, then look the MAC up
+  for i in $(seq 1 254); do ping -c1 -W1 "$PREFIX.$i" >/dev/null 2>&1 & done; wait
+  for c in $(ip neigh show dev "$IFACE" | awk -v m="$MAC" 'tolower($3)==m {print $1}' | grep -E '^[0-9.]+$'); do
+    ping -c1 -W1 "$c" >/dev/null 2>&1 && { echo "$c"; return; }    # the table can hold a stale entry
+  done
+}
+ssh_open() { timeout 3 bash -c "exec 3<>/dev/tcp/$1/22" 2>/dev/null; }
+
+if [ "${1:-}" = "--ip" ]; then
+  IP=$(find_ip); [ -n "$IP" ] && { echo "$IP"; exit 0; } || { echo "Jetson not found on $PREFIX.0/24 (asleep or off?)" >&2; exit 1; }
+fi
+
+IP=$(find_ip)
+if [ -n "$IP" ] && ssh_open "$IP"; then echo "Jetson is already awake at $IP"; exit 0; fi
+python3 - "$MAC" "$BCAST" <<'PY'
+import socket, sys, time
+mac = bytes.fromhex(sys.argv[1].replace(":", ""))
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+for _ in range(5):
+    s.sendto(b"\xff" * 6 + mac * 16, (sys.argv[2], 9))
+    time.sleep(0.2)
+PY
+echo "Magic packet sent on $IFACE; waiting up to ${WAIT}s..."
+T0=$(date +%s)
+while [ $(( $(date +%s) - T0 )) -lt "$WAIT" ]; do
+  IP=$(find_ip)
+  if [ -n "$IP" ] && ssh_open "$IP"; then echo "Jetson is awake at $IP after $(( $(date +%s) - T0 ))s"; exit 0; fi
+done
+echo "No answer after ${WAIT}s. It only works from suspend, not from a full shutdown." >&2; exit 1
