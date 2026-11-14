@@ -96,6 +96,56 @@ Log out and back in afterwards (the installer adds your user to the `jtop` group
 
 The process table in jtop is **not** a general process list. It shows only processes that hold GPU memory or have a handle open on the GPU driver. Use `htop` for everything else.
 
+## Suspend and Wake-on-LAN
+
+A Jetson that has been shut down cannot be started over the network: only the power button or re-applying power does that. Suspend-to-RAM (SC7) plus Wake-on-LAN gives the same result in practice, and it works on this board once it is set up the right way.
+
+Setup, once (the setting is stored in the connection profile and survives reboots):
+
+```bash
+sudo nmcli con mod "Wired connection 1" 802-3-ethernet.wake-on-lan magic
+sudo nmcli con up "Wired connection 1"
+sudo ethtool eth0 | grep Wake-on        # Wake-on: g
+```
+
+Sleep and wake:
+
+```bash
+sudo systemctl suspend                  # on the Jetson
+```
+
+```python
+# on any other machine in the same LAN; MAC is the Jetson's eth0 address
+import socket
+mac = bytes.fromhex("AABBCCDDEEFF")
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+s.sendto(b"\xff" * 6 + mac * 16, ("192.168.1.255", 9))
+```
+
+Measured over four wake-ups, one of them after five minutes asleep: SSH answered 11 to 18 s after the magic packet, it was the same boot (not a restart), the NVMe link was still Gen4 with no errors, and a CUDA computation in PyTorch ran correctly afterwards. The kernel log names the wake source:
+
+```
+tegra-pmc: Resume caused by WAKE20, 2490000.ethernet:01     # magic packet
+tegra-pmc: Resume caused by WAKE24, max77620-top            # RTC alarm (rtcwake)
+tegra-pmc: Resume caused by WAKE80, irq 204                 # USB device
+```
+
+What went wrong on the way, so you can skip it:
+
+| What was done | What happened |
+|---|---|
+| `ethtool -s eth0 wol g`, then `rtcwake -m mem` (suspends without telling systemd or NetworkManager) | The magic packet woke the board, but the Ethernet link never came back and a USB keyboard stopped responding. `ip link set eth0 down; ip link set eth0 up` on the console restored the network |
+| `ethtool -s eth0 wol g`, then `systemctl suspend` | No wake: NetworkManager takes the interface down on suspend and the ethtool setting is lost |
+| `wake-on-lan magic` in the NetworkManager profile, then `systemctl suspend` | Works |
+
+Other things to know:
+
+- **A wireless keyboard or mouse dongle wakes the board** on any key press or movement. To stop that for one device: `echo disabled | sudo tee /sys/bus/usb/devices/<id>/power/wakeup` (not persistent).
+- **The IP address can change after a resume** if the network is brought up outside NetworkManager, because DHCP starts over. With a home router handing out a new address, an SSH session to the old one just hangs, which looks exactly like a crashed board. It is not. Check the console, or scan the LAN, before cutting power. A DHCP reservation in the router avoids the whole problem.
+- **mDNS (`hostname.local`) is not a reliable substitute**: it stopped resolving from a Mac for a while right after each resume.
+- Power drawn while suspended was not measured.
+
 ## A harmless firmware-update loop
 
 After flashing the QSPI with `flash.sh`, the system shows this on every boot:
