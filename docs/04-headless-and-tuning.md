@@ -100,7 +100,7 @@ The process table in jtop is **not** a general process list. It shows only proce
 
 A Jetson that has been shut down cannot be started over the network: only the power button or re-applying power does that. Suspend-to-RAM (SC7) plus Wake-on-LAN gives the same result in practice, and it works on this board once it is set up the right way.
 
-Setup, once (the setting is stored in the connection profile and survives reboots):
+Setup, once (the setting is stored in the connection profile; after two reboots `ethtool` still reported `Wake-on: g`):
 
 ```bash
 sudo nmcli con mod "Wired connection 1" 802-3-ethernet.wake-on-lan magic
@@ -168,7 +168,7 @@ Host jetson
     User youruser
 ```
 
-`Match` blocks must come before the `Host` block they refine. `nc -z -G 2` is the macOS spelling of a two-second connect test; on Linux use `nc -z -w 2`. Away from home the same jump host runs the wake script: `ssh homeserver wake-jetson`.
+`Match` blocks must come before the `Host` block they refine. Tested from a phone hotspot with the laptop's tunnel to a VPS active: the session went laptop, VPS tunnel, home server, Jetson. Connecting took about 11 s, because each `nc` probe waits its two seconds before the next route is tried, so scripts that pass `-o ConnectTimeout=5` fail with `Connection timed out during banner exchange`. Give them 30 s. Two full reboot-and-test cycles were driven over that path. `nc -z -G 2` is the macOS spelling of a two-second connect test; on Linux use `nc -z -w 2`. Away from home the same jump host runs the wake script: `ssh homeserver wake-jetson`.
 
 ## A harmless firmware-update loop
 

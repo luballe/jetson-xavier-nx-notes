@@ -163,7 +163,16 @@ claude --version
 claude doctor                                         # "No installation issues found."
 ```
 
-`~/.local/bin` is added to `PATH` by Ubuntu's `~/.profile` at the next login. Signing in is interactive (`claude`, then `/login`). The check here went as far as `claude doctor` and the "Not logged in" reply to a prompt; a signed-in session was not tested.
+`~/.local/bin` is added to `PATH` by Ubuntu's `~/.profile` at the next login. Signing in is interactive (`claude`, then `/login`). The check here went as far as `claude doctor` and the "Not logged in" reply to a prompt; a signed-in session was not tested by the author of these notes.
+
+Over SSH it shows `Tip: Try setting environment variable COLORTERM=truecolor for richer colors`. SSH does not forward that variable, so set it on the Jetson for SSH sessions only (the physical console cannot show 24-bit colour):
+
+```bash
+# ~/.bashrc
+if [ -n "$SSH_CONNECTION" ] && [ -z "$COLORTERM" ] && [ "$TERM" != linux ]; then
+    export COLORTERM=truecolor
+fi
+```
 
 ## Python version
 
