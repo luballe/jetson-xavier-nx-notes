@@ -388,6 +388,45 @@ def opencv_cuda_resize_and_color():
 
 
 @test
+def opencv_linear_algebra_matches_numpy():
+    """OpenCV's LAPACK/BLAS path (solve, SVD, eigen, gemm) against NumPy.
+
+    This OpenCV build calls the system liblapack.so.3 and libcblas.so.3, which are separate
+    files from the libopenblas.so.0 PyTorch uses. See docs/07-pytorch-openblas-nan.md.
+    """
+    cv2 = need("cv2")
+    np = need("numpy")
+    rng = np.random.RandomState(1)
+    worst = 0.0
+
+    def rel(a, ref):
+        assert np.isfinite(a).all(), "NaN or Inf in an OpenCV linear-algebra result"
+        return float(np.abs(a - ref).max() / np.abs(ref).max())
+
+    for n in (8, 100, 600):
+        a = rng.rand(n, n) + n * np.eye(n)
+        b = rng.rand(n, 3)
+        m = rng.rand(n, n)
+        errs = {"gemm": rel(cv2.gemm(m, m, 1, None, 0), m @ m)}
+        for name, flag in (("LU", cv2.DECOMP_LU), ("SVD", cv2.DECOMP_SVD), ("QR", cv2.DECOMP_QR)):
+            ok, x = cv2.solve(a, b, flags=flag)
+            assert ok, "cv2.solve %s failed for n=%d" % (name, n)
+            errs["solve " + name] = rel(a @ x, b)
+        ok, x = cv2.solve(a @ a.T, b, flags=cv2.DECOMP_CHOLESKY)
+        assert ok, "cv2.solve CHOLESKY failed for n=%d" % n
+        errs["solve CHOLESKY"] = rel((a @ a.T) @ x, b)
+        errs["invert"] = rel(a @ cv2.invert(a)[1], np.eye(n))
+        sv, u, vt = cv2.SVDecomp(m)
+        errs["SVD"] = max(rel((u * sv.ravel()) @ vt, m), rel(sv.ravel(), np.linalg.svd(m, compute_uv=False)))
+        sym = (m + m.T) / 2
+        errs["eigen"] = rel(np.sort(cv2.eigen(sym)[1].ravel()), np.linalg.eigvalsh(sym))
+        for k, e in errs.items():
+            assert e < 1e-8, "%s n=%d: relative error %.1e" % (k, n, e)
+            worst = max(worst, e)
+    return "gemm, solve x4, invert, SVD, eigen at n=8/100/600, worst error %.1e" % worst
+
+
+@test
 def opencv_dnn_cuda_matches_pytorch():
     cv2 = need("cv2")
     np = need("numpy")

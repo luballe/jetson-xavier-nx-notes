@@ -11,7 +11,20 @@ sudo systemctl set-default graphical.target      # to go back
 
 The desktop stays installed; it just does not start. With a monitor attached you get a text console.
 
-Measured on this board after a fresh boot: about 545 MiB of RAM in use and 6.1 GiB available without the desktop. With the desktop running, the session alone was 57 processes. On a Jetson the GPU shares RAM with the system, so memory freed here is also available to CUDA.
+Measured on this board, idle, with the services below already disabled in both cases. The desktop figures are with the GNOME session logged in (auto-login) and two minutes of settling time.
+
+| | Headless | Desktop |
+|---|---|---|
+| RAM in use | 542 MiB | 1455 MiB |
+| RAM available | 6085 MiB | 5156 MiB |
+| User-space processes | 46 | 124 |
+| System services running | 29 | 36 |
+| Per-user services running | 2 | 35 |
+| Time to reach the boot target (`systemd-analyze`) | 31.8 s | 32.2 s |
+
+About 0.9 GiB comes back. The largest desktop processes were `gnome-shell` (346 MiB resident), `gnome-software` (194), `update-manager` (138) and `Xorg` (100). On a Jetson the GPU shares RAM with the system, so memory freed here is also available to CUDA.
+
+Boot time barely changes: the firmware and kernel dominate, and `systemd-analyze` stops counting when the target is reached, before the desktop session has finished loading. From `reboot` to an SSH login took about 105 s either way, most of it shutdown plus UEFI.
 
 ## Services disabled
 

@@ -6,7 +6,7 @@ PASS  root_device                            /dev/nvme0n1p1 ext4 456.7G
 PASS  cpu_cores_online                       6 of 6 online
 PASS  power_mode                             MODE_20W_6CORE
 PASS  temperature                            hottest zone 50 C
-PASS  memory_available                       6084 MiB of 6833 MiB
+PASS  memory_available                       5563 MiB of 6833 MiB
 PASS  boot_slots                             2 slot(s) in status normal
 PASS  systemd_units                          no failed units
 
@@ -19,7 +19,7 @@ PASS  nvme_link_speed                        Speed 16GT/s (ok), Width x4
 PASS  cpu_openmp_threads                     6 threads on 6 online cores
 PASS  cpu_openmp_reduction                   correct, 0.08 s with 6 threads
 PASS  cpu_neon_simd                          dot product matches scalar (786429.6)
-PASS  cuda_device                            Xavier, compute capability 7.2, 5611 MiB free of 6833, integrated=1
+PASS  cuda_device                            Xavier, compute capability 7.2, 5171 MiB free of 6833, integrated=1
 PASS  cuda_unified_memory                    saxpy over 4194304 elements correct
 PASS  cuda_zero_copy_pinned                  GPU modified host buffer in place, 0 wrong of 4194304
 PASS  cublas_sgemm                           256x256 product, relative error 5.5e-07
@@ -37,26 +37,27 @@ PASS  vpi_c_cuda                             max difference vs CPU 1 grey level(
 PASS  vpi_c_pva                              max difference vs CPU 5 grey level(s), mean 2.99
 
 == Python GPU stack
-PASS  numpy_version                          numpy 1.24.4  [0.5s]
+PASS  numpy_version                          numpy 1.24.4  [0.3s]
 PASS  cudnn_library                          cuDNN 8.6.0  [0.1s]
-PASS  torch_cuda_available                   torch 2.1.0a0+41361538.nv23.06 on Xavier, cuDNN 8600  [7.7s]
+PASS  torch_cuda_available                   torch 2.1.0a0+41361538.nv23.06 on Xavier, cuDNN 8600  [6.6s]
 PASS  torch_cpu_blas_first_call              5 CPU products of 1024x1024, no NaN, matches NumPy (6 threads)  [0.6s]
-PASS  torch_cpu_multithread_convnet          6 threads match 1 thread, max difference 0.0e+00  [1.8s]
-PASS  torch_matmul_gpu_matches_cpu           relative error 1.9e-06  [9.6s]
+PASS  torch_cpu_multithread_convnet          6 threads match 1 thread, max difference 0.0e+00  [2.0s]
+PASS  torch_matmul_gpu_matches_cpu           relative error 1.9e-06  [9.4s]
 PASS  torch_cudnn_conv_matches_cpu           max abs error 1.0e-07  [3.7s]
 PASS  torch_half_precision                   FP16 max abs error 1.8e-04  [0.1s]
 PASS  torch_training_step                    loss 1037.73 -> 0.0334  [0.5s]
 PASS  torch_memory_released                  256 MiB allocated and freed  [0.1s]
-PASS  torchvision_nms_on_gpu                 torchvision 0.16.1, compiled CUDA ops work  [13.8s]
-PASS  torchvision_resnet18_gpu_matches_cpu   max abs error 1.4e-06  [8.1s]
-PASS  tensorrt_gpu_fp32_matches_pytorch      max abs error 1.0e-07, build 10s, 1.3 ms/inference  [26.8s]
-PASS  tensorrt_gpu_fp16_matches_pytorch      max abs error 4.8e-04, build 5s, 0.7 ms/inference  [5.0s]
+PASS  torchvision_nms_on_gpu                 torchvision 0.16.1, compiled CUDA ops work  [13.0s]
+PASS  torchvision_resnet18_gpu_matches_cpu   max abs error 1.4e-06  [8.2s]
+PASS  tensorrt_gpu_fp32_matches_pytorch      max abs error 1.0e-07, build 10s, 3.6 ms/inference  [26.0s]
+PASS  tensorrt_gpu_fp16_matches_pytorch      max abs error 4.8e-04, build 6s, 0.8 ms/inference  [5.8s]
 PASS  tensorrt_dla0_matches_pytorch          max abs error 1.8e-04, 7 DLA subgraph(s), build 1s, 1.4 ms/inference  [0.9s]
 PASS  tensorrt_dla1_matches_pytorch          max abs error 1.8e-04, 7 DLA subgraph(s), build 1s, 1.4 ms/inference  [0.9s]
-PASS  opencv_built_with_cuda                 OpenCV 4.10.0, 1 CUDA device, GStreamer yes  [1.5s]
+PASS  opencv_built_with_cuda                 OpenCV 4.10.0, 1 CUDA device, GStreamer yes  [1.2s]
 PASS  opencv_cuda_filter_matches_cpu         1080p Gaussian, max difference 1 grey level(s)  [1.8s]
-PASS  opencv_cuda_resize_and_color           cvtColor difference 0, resize ok  [0.5s]
-PASS  opencv_dnn_cuda_matches_pytorch        max abs error FP32 1.0e-07, FP16 4.9e-04  [13.8s]
+PASS  opencv_cuda_resize_and_color           cvtColor difference 0, resize ok  [0.6s]
+PASS  opencv_linear_algebra_matches_numpy    gemm, solve x4, invert, SVD, eigen at n=8/100/600, worst error 4.6e-14  [14.3s]
+PASS  opencv_dnn_cuda_matches_pytorch        max abs error FP32 1.0e-07, FP16 4.9e-04  [13.3s]
 PASS  vpi_cuda_matches_cpu                   VPI 2.4.8, interior max difference 1  [2.3s]
 PASS  vpi_pva_runs                           ran on PVA, mean difference vs CPU 3.0 grey levels (interior max 5)  [0.1s]
 
@@ -75,6 +76,6 @@ PASS  ethernet_link                          eth0 up at 1000 Mb/s
 PASS  usb_host                               2 root hub(s), 6 device(s) listed
 PASS  i2c_buses                              12 bus(es) exposed in /dev
 PASS  gpio_chips                             3 GPIO controller(s)
-PASS  fan_pwm                                fan PWM readable, now 130 of 255
+PASS  fan_pwm                                fan PWM readable, now 0 of 255
 
-== Summary: 65 passed, 0 failed, 1 skipped
+== Summary: 66 passed, 0 failed, 1 skipped

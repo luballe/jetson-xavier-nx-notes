@@ -75,7 +75,7 @@ Verified with a matrix product and a cuDNN convolution on the GPU. See [scripts/
 
 Short version below; the full investigation is in [07-pytorch-openblas-nan.md](07-pytorch-openblas-nan.md).
 
-Ubuntu 20.04 ships OpenBLAS 0.3.8, and NVIDIA's PyTorch links to it dynamically. On this CPU both builds of that version give wrong results from PyTorch when more than one thread is used. GPU results are not affected, and neither is NumPy from pip, which bundles its own OpenBLAS.
+Ubuntu 20.04 ships OpenBLAS 0.3.8, and NVIDIA's PyTorch links to it dynamically. That version does not recognise the Carmel CPU and falls back to generic routines that return NaN, so both builds of it give wrong results from PyTorch. GPU results are not affected, and neither is NumPy from pip, which bundles its own OpenBLAS.
 
 | System OpenBLAS | Symptom |
 |---|---|
@@ -91,7 +91,7 @@ a = torch.rand(1024, 1024)
 print(torch.isnan(a @ a).any())     # tensor(True) on the first call
 ```
 
-Setting `OMP_NUM_THREADS=1` hides both problems. `OPENBLAS_CORETYPE=ARMV8` does not help. The second one also disappeared when forward hooks were attached to the model, which points to a race between threads; the exact defect in 0.3.8 was not tracked down.
+`export OPENBLAS_CORETYPE=CORTEXA57` makes the stock 0.3.8 give correct results and is a workaround that needs no build. `OPENBLAS_CORETYPE=ARMV8` does not help.
 
 Fix: build a current OpenBLAS and make it the system `libopenblas.so.0` ([scripts/jetson/build_openblas.sh](../scripts/jetson/build_openblas.sh), about 15 minutes):
 
@@ -108,9 +108,9 @@ sudo ldconfig
 
 To go back: `sudo update-alternatives --config libopenblas.so.0-aarch64-linux-gnu`.
 
-Scope of the change: only `libopenblas.so.0` is switched. The separate `libblas.so.3` and `liblapack.so.3` alternatives still point at the 0.3.8 files, so software linked against those (the OpenCV built below, for its LAPACK calls) was left as it was and was not tested for this problem.
+Scope of the change: only `libopenblas.so.0` is switched. The separate `libblas.so.3` and `liblapack.so.3` alternatives still point at the 0.3.8 files, and a direct `dgemm` through `libblas.so.3` still returns NaN. The OpenCV built below was tested and is not affected: its matrix products go to ATLAS and its LAPACK calls give correct results.
 
-The test suite checks both symptoms (`torch_cpu_blas_first_call`, `torchvision_resnet18_gpu_matches_cpu`).
+The test suite checks both symptoms (`torch_cpu_blas_first_call`, `torchvision_resnet18_gpu_matches_cpu`) and OpenCV's linear algebra (`opencv_linear_algebra_matches_numpy`).
 
 ## torchvision
 
