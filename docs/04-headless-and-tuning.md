@@ -146,6 +146,13 @@ Other things to know:
 - **A USB keyboard wakes the board** with any key press, and so does a mouse movement on a wireless keyboard-and-mouse dongle. That is the default and is usually what you want with a console attached. During the tests it caused two "spontaneous" wake-ups. To stop it for one device: `echo disabled | sudo tee /sys/bus/usb/devices/<id>/power/wakeup` (lasts until reboot or re-plug). `grep . /sys/bus/usb/devices/*/power/wakeup` lists what may wake the board.
 - **The IP address can change after a resume** if the network is brought up outside NetworkManager, because DHCP starts over. With a home router handing out a new address, an SSH session to the old one just hangs, which looks exactly like a crashed board. It is not. Check the console, or scan the LAN, before cutting power. A DHCP reservation in the router avoids the whole problem.
 - **mDNS (`hostname.local`) is not a reliable substitute**: it stopped resolving from a Mac for a while right after each resume.
+- **jtop's service can stop after a suspend.** Its periodic `nvpmodel` query fails while the system is going to sleep (`JtopException: nvpmodel command unavailable`). Most times systemd restarts it, but once it exited with status 0, and with the unit's `Restart=on-failure` it stayed down: `jtop` then says "The jtop.service is not active". A drop-in fixes that:
+
+  ```bash
+  sudo mkdir -p /etc/systemd/system/jtop.service.d
+  printf "[Service]\nRestart=always\nRestartSec=5\n" | sudo tee /etc/systemd/system/jtop.service.d/restart.conf
+  sudo systemctl daemon-reload && sudo systemctl restart jtop
+  ```
 - Power drawn while suspended was not measured.
 
 ## Reaching the board from outside the LAN
