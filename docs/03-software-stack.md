@@ -15,6 +15,7 @@ What was installed on top of Jetson Linux 35.6.5, how, and how each piece was ve
 | OpenCV | 4.10.0 with contrib | Built from source |
 | NumPy | 1.24.4 | pip (the last line that supports Python 3.8) |
 | onnx | 1.17.0 | pip |
+| OpenBLAS | 0.3.28, OpenMP | Built from source; the 0.3.8 from apt gives NaN, see the PyTorch section |
 
 ## JetPack components from apt
 
@@ -70,7 +71,44 @@ sudo -H python3 -m pip install ./$W
 
 Verified with a matrix product and a cuDNN convolution on the GPU. See [scripts/jetson/install_pytorch.sh](../scripts/jetson/install_pytorch.sh).
 
-Install NumPy **before** building OpenCV, so the OpenCV Python module is compiled against the NumPy you will actually run.
+### Replace OpenBLAS, or CPU results can be NaN
+
+Ubuntu 20.04 ships OpenBLAS 0.3.8, and NVIDIA's PyTorch links to it dynamically. On this CPU both builds of that version give wrong results from PyTorch when more than one thread is used. GPU results are not affected, and neither is NumPy from pip, which bundles its own OpenBLAS.
+
+| System OpenBLAS | Symptom |
+|---|---|
+| 0.3.8 pthread build (what `libopenblas-dev` selects) | The first multi-threaded matrix product in a process returns NaN; later ones are correct |
+| 0.3.8 OpenMP build (`libopenblas0-openmp`) | The matrix product is fine, but a ResNet-18 forward pass on the CPU returns NaN every time |
+| 0.3.28 built from source with OpenMP | Both correct |
+
+Minimal reproduction of the first one:
+
+```python
+import torch
+a = torch.rand(1024, 1024)
+print(torch.isnan(a @ a).any())     # tensor(True) on the first call
+```
+
+Setting `OMP_NUM_THREADS=1` hides both problems. `OPENBLAS_CORETYPE=ARMV8` does not help. The second one also disappeared when forward hooks were attached to the model, which points to a race between threads; the exact defect in 0.3.8 was not tracked down.
+
+Fix: build a current OpenBLAS and make it the system `libopenblas.so.0` ([scripts/jetson/build_openblas.sh](../scripts/jetson/build_openblas.sh), about 15 minutes):
+
+```bash
+wget https://github.com/OpenMathLib/OpenBLAS/archive/refs/tags/v0.3.28.tar.gz
+tar xf v0.3.28.tar.gz && cd OpenBLAS-0.3.28
+make -j6 USE_OPENMP=1 TARGET=ARMV8 NUM_THREADS=16
+sudo make install PREFIX=/opt/OpenBLAS USE_OPENMP=1 TARGET=ARMV8 NUM_THREADS=16
+sudo update-alternatives --install /usr/lib/aarch64-linux-gnu/libopenblas.so.0 \
+    libopenblas.so.0-aarch64-linux-gnu /opt/OpenBLAS/lib/libopenblas.so.0 200
+sudo update-alternatives --set libopenblas.so.0-aarch64-linux-gnu /opt/OpenBLAS/lib/libopenblas.so.0
+sudo ldconfig
+```
+
+To go back: `sudo update-alternatives --config libopenblas.so.0-aarch64-linux-gnu`.
+
+Scope of the change: only `libopenblas.so.0` is switched. The separate `libblas.so.3` and `liblapack.so.3` alternatives still point at the 0.3.8 files, so software linked against those (the OpenCV built below, for its LAPACK calls) was left as it was and was not tested for this problem.
+
+The test suite checks both symptoms (`torch_cpu_blas_first_call`, `torchvision_resnet18_gpu_matches_cpu`).
 
 ## torchvision
 
@@ -85,7 +123,13 @@ export BUILD_VERSION=0.16.1
 sudo -E python3 setup.py install
 ```
 
-See [scripts/jetson/build_torchvision.sh](../scripts/jetson/build_torchvision.sh).
+The build compiles one file at a time and took 45 minutes. See [scripts/jetson/build_torchvision.sh](../scripts/jetson/build_torchvision.sh).
+
+For video work also install the GStreamer parsers (`h264parse`, `h265parse`), which the sample root filesystem does not include:
+
+```bash
+sudo apt install gstreamer1.0-plugins-bad
+```
 
 ## OpenCV with CUDA
 

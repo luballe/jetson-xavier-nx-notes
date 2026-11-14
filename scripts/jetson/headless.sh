@@ -5,6 +5,7 @@ systemctl set-default multi-user.target
 systemctl disable --now bluetooth ModemManager kerneloops apport \
     snapd.socket snapd.seeded snapd.apparmor snapd wpa_supplicant
 sed -i 's/^enabled=1/enabled=0/' /etc/default/apport
+systemctl mask wpa_supplicant        # NetworkManager would start it again otherwise
 nmcli radio wifi off
 rfkill block wifi
 rfkill block bluetooth

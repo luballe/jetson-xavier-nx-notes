@@ -3,6 +3,8 @@
 set -e
 export DEBIAN_FRONTEND=noninteractive
 apt-get -y -q install python3-pip libopenblas-dev libopenmpi-dev libomp-dev wget
+# IMPORTANT: Ubuntu 20.04's OpenBLAS 0.3.8 makes multi-threaded CPU results NaN with this
+# PyTorch. Run build_openblas.sh as well. See docs/03-software-stack.md.
 python3 -m pip install --upgrade pip
 python3 -m pip install "numpy==1.24.4"
 W=torch-2.1.0a0+41361538.nv23.06-cp38-cp38-linux_aarch64.whl

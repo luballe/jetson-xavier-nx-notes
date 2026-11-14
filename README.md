@@ -20,6 +20,7 @@ Everything here was done and verified on one specific unit. Treat it as a worked
 | PyTorch / torchvision | 2.1.0a0 (NVIDIA wheel `nv23.06`) / 0.16.1 built from source |
 | OpenCV | 4.10.0 built from source with CUDA, cuDNN and contrib modules |
 | VPI | 2.4.8 (CPU, CUDA and PVA backends) |
+| OpenBLAS | 0.3.28 built from source (the distribution's 0.3.8 gives NaN with PyTorch on the CPU) |
 
 JetPack 5 is the end of the line for Xavier NX. JetPack 6 does not support it.
 
@@ -34,12 +35,22 @@ JetPack 5 is the end of the line for Xavier NX. JetPack 6 does not support it.
 | [docs/05-architecture-notes.md](docs/05-architecture-notes.md) | The hardware engines on the SoC and how shared CPU/GPU memory affects code |
 | [docs/06-orin-upgrade-research.md](docs/06-orin-upgrade-research.md) | Whether an Orin NX module fits this carrier board, and November 2026 prices |
 | [scripts/](scripts/) | The scripts used, cleaned up |
+| [tests/](tests/) | A test suite in C, C++, CUDA, Python and GStreamer that exercises every engine on the chip and checks the results |
 
 ## The short version of what went wrong
 
 1. The board would not boot because the firmware in QSPI and the system on disk no longer matched. Reflashing from an x86 Ubuntu host in recovery mode fixed that.
 2. The original SSD, a Samsung 970 EVO Plus 250 GB, produces PCIe link errors in this board's M.2 slot. The drive is healthy and the slot is healthy; the pairing is not. A different SSD in the same slot runs with zero errors.
 3. Several "it powers off by itself" symptoms were not power or heat. They were a system hanging with no root filesystem, and later the UEFI falling back to a recovery kernel that did not exist.
+
+## Checking your own board
+
+```bash
+git clone https://github.com/luballe/jetson-xavier-nx-notes
+cd jetson-xavier-nx-notes/tests && ./run_all.sh
+```
+
+See [tests/README.md](tests/README.md) for what it covers and how to read failures.
 
 ## Conventions
 

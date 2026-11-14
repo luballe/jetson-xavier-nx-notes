@@ -1,0 +1,10 @@
+tests/native/cpu_openmp_neon
+tests/native/cuda_basics
+tests/native/cuda_libs
+tests/native/cudnn_conv
+tests/native/tensorrt_engine
+tests/native/opencv_cuda
+tests/native/vpi_backends
+tests/native/build_*.log
+__pycache__/
+.DS_Store

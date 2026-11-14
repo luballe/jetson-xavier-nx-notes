@@ -11,7 +11,7 @@ sudo systemctl set-default graphical.target      # to go back
 
 The desktop stays installed; it just does not start. With a monitor attached you get a text console.
 
-Before the change, the desktop session accounted for 57 processes. On a Jetson the GPU shares RAM with the system, so memory freed here is also available to CUDA.
+Measured on this board after a fresh boot: about 545 MiB of RAM in use and 6.1 GiB available without the desktop. With the desktop running, the session alone was 57 processes. On a Jetson the GPU shares RAM with the system, so memory freed here is also available to CUDA.
 
 ## Services disabled
 
@@ -19,6 +19,7 @@ Before the change, the desktop session accounted for 57 processes. On a Jetson t
 sudo systemctl disable --now bluetooth ModemManager kerneloops apport \
     snapd.socket snapd.seeded snapd.apparmor snapd wpa_supplicant
 sudo sed -i 's/^enabled=1/enabled=0/' /etc/default/apport
+sudo systemctl mask wpa_supplicant        # otherwise NetworkManager starts it again at boot
 sudo nmcli radio wifi off
 sudo rfkill block wifi
 sudo rfkill block bluetooth
@@ -34,7 +35,7 @@ sudo rfkill block bluetooth
 
 Kept on purpose: `nvargus-daemon` (CSI cameras), `nvfancontrol`, `nvpmodel`, zram.
 
-Nothing was uninstalled, so `systemctl enable --now <unit>` and `rfkill unblock` undo it. Check that you are connected over Ethernet before switching Wi-Fi off.
+Nothing was uninstalled, so `systemctl unmask`, `systemctl enable --now <unit>` and `rfkill unblock` undo it. Check that you are connected over Ethernet before switching Wi-Fi off.
 
 ## Power modes
 
