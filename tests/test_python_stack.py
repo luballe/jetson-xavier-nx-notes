@@ -98,6 +98,56 @@ def torch_cuda_available():
 
 
 @test
+def numpy_system_blas_lapack_direct():
+    """Call the system BLAS/LAPACK files directly, without PyTorch or OpenCV in between.
+
+    Ubuntu 20.04's OpenBLAS 0.3.8 does not recognise the Carmel CPU and its fallback
+    routines return NaN from a plain matrix product. libblas.so.3, liblapack.so.3 and
+    libopenblas.so.0 are three separate alternatives and all three must be healthy.
+    See docs/07-pytorch-openblas-nan.md.
+    """
+    np = need("numpy")
+    import ctypes as C
+    i = lambda v: C.byref(C.c_int(v))
+    rng = np.random.RandomState(0)
+    seen = []
+    for soname in ("libblas.so.3", "liblapack.so.3", "libopenblas.so.0"):
+        try:
+            lib = C.CDLL(soname)
+        except OSError:
+            continue
+        seen.append(soname)
+        for n in (64, 256, 1024):
+            for dt, fn, one, zero, tol in ((np.float32, "sgemm_", C.c_float(1), C.c_float(0), 1e-4),
+                                           (np.float64, "dgemm_", C.c_double(1), C.c_double(0), 1e-10)):
+                if not hasattr(lib, fn):
+                    continue
+                a = np.asfortranarray(rng.rand(n, n).astype(dt))
+                b = np.asfortranarray(rng.rand(n, n).astype(dt))
+                c = np.zeros((n, n), dt, order="F")
+                getattr(lib, fn)(b"N", b"N", i(n), i(n), i(n), C.byref(one), a.ctypes, i(n),
+                                 b.ctypes, i(n), C.byref(zero), c.ctypes, i(n))
+                nan = int(np.isnan(c).sum())
+                assert nan == 0, ("%s %s n=%d: %d NaN elements. Broken OpenBLAS; "
+                                  "see docs/07-pytorch-openblas-nan.md" % (soname, fn, n, nan))
+                ref = a.astype(np.float64) @ b.astype(np.float64)
+                err = float(np.abs(c - ref).max() / ref.max())
+                assert err < tol, "%s %s n=%d: relative error %.1e" % (soname, fn, n, err)
+        if hasattr(lib, "dgesv_"):
+            n = 500
+            a = np.asfortranarray(rng.rand(n, n) + n * np.eye(n))
+            b = np.asfortranarray(rng.rand(n, 2))
+            lu, x = a.copy(order="F"), b.copy(order="F")
+            piv, info = (C.c_int * n)(), C.c_int(0)
+            lib.dgesv_(i(n), i(2), lu.ctypes, i(n), piv, x.ctypes, i(n), C.byref(info))
+            err = float(np.abs(a @ x - b).max())
+            assert info.value == 0 and err < 1e-9, "%s dgesv_: info %d, residual %.1e" % (soname, info.value, err)
+    if not seen:
+        raise Skip("no system BLAS/LAPACK library found")
+    return "sgemm, dgemm, dgesv correct through " + ", ".join(seen)
+
+
+@test
 def torch_cpu_blas_first_call():
     """Must be the first CPU matrix product in the process.
 

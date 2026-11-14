@@ -20,7 +20,7 @@ Everything here was done and verified on one specific unit. Treat it as a worked
 | PyTorch / torchvision | 2.1.0a0 (NVIDIA wheel `nv23.06`) / 0.16.1 built from source |
 | OpenCV | 4.10.0 built from source with CUDA, cuDNN and contrib modules |
 | VPI | 2.4.8 (CPU, CUDA and PVA backends) |
-| OpenBLAS | 0.3.28 built from source (the distribution's 0.3.8 gives NaN with PyTorch on the CPU) |
+| BLAS / LAPACK | OpenBLAS 0.3.28 built from source, for the whole system (the distribution's 0.3.8 returns NaN on this CPU) |
 
 JetPack 5 is the end of the line for Xavier NX. JetPack 6 does not support it.
 
@@ -34,7 +34,7 @@ JetPack 5 is the end of the line for Xavier NX. JetPack 6 does not support it.
 | [docs/04-headless-and-tuning.md](docs/04-headless-and-tuning.md) | Headless mode, disabled services, power modes, jtop, zram, and a harmless firmware-update loop |
 | [docs/05-architecture-notes.md](docs/05-architecture-notes.md) | The hardware engines on the SoC and how shared CPU/GPU memory affects code |
 | [docs/06-orin-upgrade-research.md](docs/06-orin-upgrade-research.md) | Whether an Orin NX module fits this carrier board, and November 2026 prices |
-| [docs/07-pytorch-openblas-nan.md](docs/07-pytorch-openblas-nan.md) | PyTorch returning NaN on the CPU because of Ubuntu's OpenBLAS 0.3.8: symptoms, diagnosis and fix |
+| [docs/07-pytorch-openblas-nan.md](docs/07-pytorch-openblas-nan.md) | NaN from CPU math (PyTorch and anything linked to the system BLAS) caused by Ubuntu's OpenBLAS 0.3.8: how it was found, the root cause and the fix |
 | [scripts/](scripts/) | The scripts used, cleaned up |
 | [tests/](tests/) | A test suite in C, C++, CUDA, Python and GStreamer that exercises every engine on the chip and checks the results |
 
