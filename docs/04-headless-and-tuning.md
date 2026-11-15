@@ -70,6 +70,28 @@ Switching from mode 5 to mode 8 worked without a reboot, and the setting persist
 
 `nvfancontrol` keeps the fan off below roughly 50 °C. A silent fan on a warm heatsink is normal. A fan pinned at 100 % means nothing is controlling it, which is the case in recovery and in the flashing initrd.
 
+The PWM duty (0 to 255) is in `/sys/devices/platform/pwm-fan/hwmon/hwmon*/pwm1` and the tachometer in the `rpm` file of the `pwm-tach` hwmon device (`grep . /sys/class/hwmon/*/rpm`). The tachometer reads 0 whenever the fan is stopped, so a reading of "0 rpm" taken on a cool board says nothing about the fan; with the fan running it read about 2970 rpm.
+
+## jetson_clocks
+
+`jetson_clocks` is a benchmarking switch, separate from the power mode: it pins every clock at the maximum the current `nvpmodel` mode allows, so that measurements do not include the time the governors take to ramp up. It does not raise any limit.
+
+| | Default (mode 8) | After `sudo jetson_clocks` |
+|---|---|---|
+| CPU | `schedutil`, 1190 to 1420 MHz, idle states on | Minimum raised to 1420 MHz, idle states C1 and C6 disabled |
+| GPU | 115 to 1109 MHz on demand, 115 MHz when idle | Minimum raised to 1109 MHz, rail-gating off |
+| Memory (EMC) | Follows load (1600 MHz when idle here) | Locked at 1866 MHz |
+| Fan | `nvfancontrol` | Unchanged, unless `--fan` is given |
+
+```bash
+sudo jetson_clocks --show                 # what is in effect now
+sudo jetson_clocks --store ~/clocks.conf  # save the current settings first
+sudo jetson_clocks                        # pin everything at maximum
+sudo jetson_clocks --restore ~/clocks.conf
+```
+
+The setting does not survive a reboot, and nothing puts it back automatically while the board stays up: a tool or an assistant that runs `jetson_clocks` for a benchmark leaves the board idling hotter and drawing more power until someone restores it or reboots. That happened here after a CUDA test. `--show` gave it away (`MinFreq` equal to `MaxFreq`, `IdleStates: C1=0 c6=0`, `FreqOverride=1`), and `--restore` from the file saved before the test brought back the default column above, verified with `--show`. If no file was saved, a reboot does the same.
+
 ## zram
 
 The default configuration creates compressed swap in RAM (one device per CPU core, six here, about 3.4 GB total). It was left enabled.
@@ -184,7 +206,20 @@ What the logs showed:
 | About 120 s between the last write and the restart; `tegra_wdt_t18x ... init timeout = 120 sec` | Consistent with the kernel-fed hardware watchdog expiring. An inference from the timing |
 | No thermal, over-current, OOM or panic messages; `/sys/fs/pstore` had nothing new; NVMe SMART clean | None of the usual suspects left a trace |
 
-Asking Claude Code to run a single shell command afterwards worked normally, so the cause was **not found**. A plausible but untested suspect is one of the hardware-probing commands such a survey would run: on embedded boards, tools that read every sysfs or debugfs file, scan I2C buses or probe `/dev/mem` can hang the kernel.
+Attempts to reproduce it:
+
+| Attempt | Result |
+|---|---|
+| Ask Claude Code on the board to run one shell command | Normal |
+| Repeat the original request in full: an exhaustive hardware survey plus a CUDA test. 22 shell commands, 15 of them with `sudo`, among them `i2cdetect` on the I2C buses, `nvme` SMART queries, `lspci -vv`, `tegrastats`, `jetson_clocks`, and compiling and running a CUDA program | Normal. No freeze, nothing in the kernel log |
+| The following 8 hours of ordinary use, recorder running | No reset |
+
+Two suspects were examined and dropped:
+
+- **A hardware-probing command.** On embedded boards, tools that scan I2C buses or read every sysfs or debugfs file can hang the kernel, and the survey was just starting. But the full survey then ran without trouble, so nothing supports this any more.
+- **A remote command sent at about the same time** (an append to `~/.bashrc` over SSH). The SSH daemon's log shows no session accepted between 11 minutes before the freeze and the restart, and the client reported `No route to host`: the command arrived about a minute after the board had already stopped, and never ran.
+
+The cause was **not found**, and with one occurrence and no reproduction it may stay that way. The useful outcome is the method: check the reset source, check what the last writes look like, check the timing against the watchdog, and take coincidences in time to the logs before believing them.
 
 A freeze like this writes nothing by itself, so a small recorder now runs all the time: [scripts/jetson/blackbox.py](../scripts/jetson/blackbox.py) with [blackbox.service](../scripts/jetson/blackbox.service). Every 5 s or so it appends one fsynced line to `/var/log/blackbox.log`:
 
