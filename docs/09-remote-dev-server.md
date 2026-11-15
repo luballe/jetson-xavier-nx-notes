@@ -23,7 +23,7 @@ Node 24 runs on Ubuntu 20.04's glibc 2.31. For a project that needs a newer Pyth
 rsync -a --exclude node_modules --exclude __pycache__ ./ jetson:workspace/
 ```
 
-Leave out `node_modules` and Python virtual environments: they hold macOS binaries and have to be re-created on Linux. Then compare `git status` on both sides for every repository. It was identical for 26 of 32; the other six differed for three reasons, none of them a copy error:
+Leave out `node_modules` and Python virtual environments: they hold macOS binaries and have to be re-created on Linux. Then compare `git status` on both sides for every repository. It was identical for 17 of 32; the other 15 differed for three reasons, none of them a copy error:
 
 | Symptom on Linux | Cause | Fix |
 |---|---|---|
