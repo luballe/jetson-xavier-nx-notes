@@ -35,6 +35,7 @@ JetPack 5 is the end of the line for Xavier NX. JetPack 6 does not support it.
 | [docs/05-architecture-notes.md](docs/05-architecture-notes.md) | The hardware engines on the SoC and how shared CPU/GPU memory affects code |
 | [docs/06-orin-upgrade-research.md](docs/06-orin-upgrade-research.md) | Whether an Orin NX module fits this carrier board, and November 2026 prices |
 | [docs/07-pytorch-openblas-nan.md](docs/07-pytorch-openblas-nan.md) | NaN from CPU math (PyTorch and anything linked to the system BLAS) caused by Ubuntu's OpenBLAS 0.3.8: how it was found, the root cause and the fix |
+| [docs/08-ups.md](docs/08-ups.md) | A UPS monitored with NUT: clean shutdown of the Jetson on low battery and automatic restart when power returns (not yet tested with a real outage) |
 | [scripts/](scripts/) | The scripts used, cleaned up |
 | [tests/](tests/) | A test suite in C, C++, CUDA, Python and GStreamer that exercises every engine on the chip and checks the results |
 

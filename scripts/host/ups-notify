@@ -1,0 +1,25 @@
+#!/bin/bash
+# Called by upsmon (as user nut) on UPS events. On low battery: wait for the network
+# clients (the Jetson) to shut down, then tell the UPS to cut its output and restore it
+# when mains power is back, so that machines that power on with AC start again.
+# DRYRUN=1 logs instead of sending the command.
+UPS=cyberpower@localhost
+log(){ logger -t ups-notify "$*"; [ -n "$DRYRUN" ] && echo "$*"; }
+[ "$NOTIFYTYPE" = LOWBATT ] || exit 0
+remote(){ upsc -c $UPS 2>/dev/null | grep -c -v -E '^(127\.0\.0\.1|::1|localhost)$'; }
+exec 9>/run/nut/ups-notify.lock; flock -n 9 || exit 0
+seen=$(remote); log "low battery; remote clients connected: $seen"
+T0=$(date +%s); gone=0
+while [ $(( $(date +%s) - T0 )) -lt ${WAIT:-120} ]; do
+  n=$(remote); [ "$n" -gt 0 ] && seen=$n
+  [ "$seen" -gt 0 ] && [ "$n" -eq 0 ] && { gone=1; break; }
+  read -r -t 2 <> <(:) || true
+done
+status=$(upsc $UPS ups.status 2>/dev/null)
+if [ $gone -eq 1 ] || [[ "$status" == *OB* ]]; then
+  log "clients gone=$gone, status '$status': asking the UPS to cut the output and return with mains"
+  [ -n "$DRYRUN" ] && exit 0
+  upscmd -u admin -p "$(cat /etc/nut/.pw_admin)" $UPS shutdown.return 2>&1 | logger -t ups-notify
+else
+  log "clients still connected and status '$status': nothing to do"
+fi
