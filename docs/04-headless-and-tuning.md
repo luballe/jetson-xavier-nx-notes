@@ -170,6 +170,30 @@ Host jetson
 
 `Match` blocks must come before the `Host` block they refine. Tested from a phone hotspot with the laptop's tunnel to a VPS active: the session went laptop, VPS tunnel, home server, Jetson. Connecting took about 11 s, because each `nc` probe waits its two seconds before the next route is tried, so scripts that pass `-o ConnectTimeout=5` fail with `Connection timed out during banner exchange`. Give them 30 s. Two full reboot-and-test cycles were driven over that path. `nc -z -G 2` is the macOS spelling of a two-second connect test; on Linux use `nc -z -w 2`. Away from home the same jump host runs the wake script: `ssh homeserver wake-jetson`.
 
+## An unexplained freeze, and a flight recorder
+
+Once, about 17 minutes after a clean boot, the board froze completely and restarted by itself roughly two minutes later. It happened seconds after an interactive Claude Code session on the board was asked to survey the hardware and was preparing its first shell command.
+
+What the logs showed:
+
+| Evidence | Meaning |
+|---|---|
+| No shutdown messages; `last -x` lists the sessions as `crash` | Not an orderly reboot |
+| `tegra-pmc: ### PMC reset source: MAINSWRST` | A software-initiated reset, not a power loss. A normal `reboot` logs the same source, so this does not tell a watchdog reset from a requested one |
+| Files written in the last seconds were empty or ended in NUL bytes | The freeze was abrupt; data never reached the disk |
+| About 120 s between the last write and the restart; `tegra_wdt_t18x ... init timeout = 120 sec` | Consistent with the kernel-fed hardware watchdog expiring. An inference from the timing |
+| No thermal, over-current, OOM or panic messages; `/sys/fs/pstore` had nothing new; NVMe SMART clean | None of the usual suspects left a trace |
+
+Asking Claude Code to run a single shell command afterwards worked normally, so the cause was **not found**. A plausible but untested suspect is one of the hardware-probing commands such a survey would run: on embedded boards, tools that read every sysfs or debugfs file, scan I2C buses or probe `/dev/mem` can hang the kernel.
+
+A freeze like this writes nothing by itself, so a small recorder now runs all the time: [scripts/jetson/blackbox.py](../scripts/jetson/blackbox.py) with [blackbox.service](../scripts/jetson/blackbox.service). Every 5 s or so it appends one fsynced line to `/var/log/blackbox.log`:
+
+```
+2026-11-14 18:00:30 up=20004 load=0.67 avail=6035M swap=0M temp=CPU=47,GPU=45,AUX=46,AO=46,PMIC-Die=50 fan=130 procs=212 cpu=jtop[888]:18% mem=claude[3635]:268M new(1)=[4005] htop
+```
+
+`cpu=` is the busiest process since the previous line, `mem=` the largest, and `new=` the most recent command started, which is the field that would name a command that hangs the board. It costs about 2 % of one core and 10 MB, and the log rotates at 5 MB. After a reset: `sudo tail -20 /var/log/blackbox.log`, and look at the lines before the next `START`.
+
 ## A harmless firmware-update loop
 
 After flashing the QSPI with `flash.sh`, the system shows this on every boot:
