@@ -101,4 +101,31 @@ Results:
 - The UEFI already listed the NVMe first in its boot order, so it booted from the SSD on the next restart with the microSD still inserted, and again with the microSD removed.
 - The microSD was left untouched as a fallback boot device (F11 at the logo selects it).
 
+### The boot order does not stay put
+
+Weeks later the microSD was taken out and, later still, put back in. On the next power-up the board booted **from the microSD**, into the old system, without any message. The UEFI had re-created the entry for the card and placed it first:
+
+```
+$ sudo efibootmgr
+BootCurrent: 0001
+BootOrder: 0001,0009,0000,0002,...
+Boot0001* UEFI SD Device
+Boot0009* UEFI <NVMe model and serial>
+```
+
+Nothing is damaged by this, but it is easy to miss over SSH: the hostname and the address are the same, and only the missing services and the old files give it away. Check before doing anything else:
+
+```bash
+findmnt -no SOURCE /            # /dev/nvme0n1p1 or /dev/mmcblk0p1
+```
+
+To put the SSD first again (from either system), keeping the card as the fallback:
+
+```bash
+sudo efibootmgr -o 0009,0001,0000,0002,0003,0004,0005,0006,0007
+sudo reboot
+```
+
+`sudo efibootmgr -n 0001` boots the card once, on the next restart only, which is the safe way to test a card. Re-check the order whenever a card is inserted or removed.
+
 A caution: a failed boot or two is harmless, but repeated failed boots trigger the recovery-boot state described in [01-recovery-and-flashing.md](01-recovery-and-flashing.md).

@@ -29,13 +29,14 @@ JetPack 5 is the end of the line for Xavier NX. JetPack 6 does not support it.
 | File | What it covers |
 |---|---|
 | [docs/01-recovery-and-flashing.md](docs/01-recovery-and-flashing.md) | Reflashing a dead board from an Ubuntu host, every failure hit on the way, and the fix for each |
-| [docs/02-nvme-ssd.md](docs/02-nvme-ssd.md) | A Samsung 970 EVO Plus that does not work in this board, how it was diagnosed, and moving the system from microSD to NVMe |
+| [docs/02-nvme-ssd.md](docs/02-nvme-ssd.md) | A Samsung 970 EVO Plus that does not work in this board, how it was diagnosed, and moving the system from microSD to NVMe, and a boot order that changes when a card is re-inserted |
 | [docs/03-software-stack.md](docs/03-software-stack.md) | Installing CUDA, cuDNN, TensorRT, VPI, PyTorch, torchvision, and building OpenCV with CUDA |
 | [docs/04-headless-and-tuning.md](docs/04-headless-and-tuning.md) | Headless mode, disabled services, power modes, jetson_clocks, jtop, zram, suspend with Wake-on-LAN, a flight recorder for unexplained freezes, and a harmless firmware-update loop |
 | [docs/05-architecture-notes.md](docs/05-architecture-notes.md) | The hardware engines on the SoC and how shared CPU/GPU memory affects code |
 | [docs/06-orin-upgrade-research.md](docs/06-orin-upgrade-research.md) | Whether an Orin NX module fits this carrier board, and November 2026 prices |
 | [docs/07-pytorch-openblas-nan.md](docs/07-pytorch-openblas-nan.md) | NaN from CPU math (PyTorch and anything linked to the system BLAS) caused by Ubuntu's OpenBLAS 0.3.8: how it was found, the root cause and the fix |
 | [docs/08-ups.md](docs/08-ups.md) | A UPS monitored with NUT: clean shutdown of the Jetson on low battery and automatic restart when power returns (not yet tested with a real outage) |
+| [docs/09-remote-dev-server.md](docs/09-remote-dev-server.md) | The board as an always-on development server: user-level tools next to the NVIDIA Python stack, moving git repositories from macOS, moving a Claude Code project with its memory and conversations, and Shift+Enter inside tmux |
 | [scripts/](scripts/) | The scripts used, cleaned up |
 | [tests/](tests/) | A test suite in C, C++, CUDA, Python and GStreamer that exercises every engine on the chip and checks the results |
 
