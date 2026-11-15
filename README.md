@@ -37,6 +37,7 @@ JetPack 5 is the end of the line for Xavier NX. JetPack 6 does not support it.
 | [docs/07-pytorch-openblas-nan.md](docs/07-pytorch-openblas-nan.md) | NaN from CPU math (PyTorch and anything linked to the system BLAS) caused by Ubuntu's OpenBLAS 0.3.8: how it was found, the root cause and the fix |
 | [docs/08-ups.md](docs/08-ups.md) | A UPS monitored with NUT: clean shutdown of the Jetson on low battery and automatic restart when power returns (not yet tested with a real outage) |
 | [docs/09-remote-dev-server.md](docs/09-remote-dev-server.md) | The board as an always-on development server: user-level tools next to the NVIDIA Python stack, moving git repositories from macOS, moving a Claude Code project with its memory and conversations, and Shift+Enter inside tmux |
+| [docs/10-backup-image.md](docs/10-backup-image.md) | A bootable backup image of the running system that fits a 64 GB microSD: how it is built, written, boot-tested and stored |
 | [scripts/](scripts/) | The scripts used, cleaned up |
 | [tests/](tests/) | A test suite in C, C++, CUDA, Python and GStreamer that exercises every engine on the chip and checks the results |
 
